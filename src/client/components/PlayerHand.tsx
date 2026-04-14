@@ -29,10 +29,10 @@ function cardsEqual(a: CardType, b: CardType): boolean {
 
 /* ── Layout constants ───────────────────────────────────────────────── */
 
-const CARD_WIDTH = 88;
-const CARD_HEIGHT = 124;
-const TARGET_ROW_PX = 358;
-const MIN_STEP = 26;
+const CARD_WIDTH = 96;
+const CARD_HEIGHT = 136;
+const TARGET_ROW_PX = 378;
+const MIN_STEP = 28;
 
 function stepFor(count: number): number {
   if (count <= 1) return CARD_WIDTH;
@@ -61,6 +61,7 @@ interface HandCardProps {
   idx: number;
   step: number;
   isDragging: boolean;
+  isNew: boolean;
   onDragStart: (card: CardType) => void;
   onDrag: (card: CardType, info: PanInfo) => void;
   onDragEnd: (card: CardType, info: PanInfo) => void;
@@ -84,6 +85,7 @@ function HandCard({
   idx,
   step,
   isDragging,
+  isNew,
   onDragStart,
   onDrag,
   onDragEnd,
@@ -153,6 +155,14 @@ function HandCard({
       className="touch-none cursor-grab active:cursor-grabbing"
     >
       <Card card={card} size="lg" />
+      {isNew && !isDragging && (
+        <motion.div
+          className="absolute inset-0 rounded-[12px] ring-2 ring-gold pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.3, 0.9, 0.3] }}
+          transition={{ duration: 1.4, repeat: Infinity }}
+        />
+      )}
     </motion.div>
   );
 }
@@ -193,6 +203,23 @@ export function PlayerHand({
   // Stable DOM render order. New cards append; removed cards drop out.
   // Does NOT update on reorder-during-drag.
   const domOrderRef = useRef<CardType[]>([]);
+
+  // Track the most recently drawn card so we can highlight it.
+  const [newCardKey, setNewCardKey] = useState<string | null>(null);
+  const prevHandRef = useRef<CardType[]>(hand);
+
+  // Detect newly drawn card (hand grew by 1) or discard (hand shrank).
+  useEffect(() => {
+    const prev = prevHandRef.current;
+    if (hand.length === prev.length + 1) {
+      const prevKeys = new Set(prev.map(cardKey));
+      const added = hand.find((c) => !prevKeys.has(cardKey(c)));
+      if (added) setNewCardKey(cardKey(added));
+    } else if (hand.length < prev.length) {
+      setNewCardKey(null);
+    }
+    prevHandRef.current = hand;
+  }, [hand]);
 
   // Sync local order with server hand. Preserve manual reorder; append new
   // cards at the end; drop cards that are no longer in the hand. Skip
@@ -311,6 +338,7 @@ export function PlayerHand({
                 idx={idx}
                 step={step}
                 isDragging={isDragging}
+                isNew={newCardKey === key}
                 onDragStart={handleDragStart}
                 onDrag={handleDrag}
                 onDragEnd={handleDragEnd}

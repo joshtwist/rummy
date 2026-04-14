@@ -24,19 +24,19 @@ interface CardProps {
 const SIZE_CLASSES = {
   sm: "w-10 h-14 rounded-[6px]",
   md: "w-16 h-[90px] rounded-[10px]",
-  lg: "w-[88px] h-[124px] rounded-[12px]",
+  lg: "w-[96px] h-[136px] rounded-[12px]",
 } as const;
 
 const RANK_CLASSES = {
   sm: "text-[9px] leading-[1]",
   md: "text-[15px] leading-[1]",
-  lg: "text-[22px] leading-[1]",
+  lg: "text-[24px] leading-[1]",
 } as const;
 
 const SUIT_CLASSES = {
   sm: "text-[7px] leading-[1]",
   md: "text-[11px] leading-[1]",
-  lg: "text-[15px] leading-[1]",
+  lg: "text-[16px] leading-[1]",
 } as const;
 
 /* ── Card back (face-down) ──────────────────────────────────────────── */
@@ -110,7 +110,7 @@ function CardFace({
 const CORNER_OFFSET = {
   sm: "p-[3px]",
   md: "p-[5px]",
-  lg: "p-[8px]",
+  lg: "p-[9px]",
 } as const;
 
 /* ── Public Card component ──────────────────────────────────────────── */

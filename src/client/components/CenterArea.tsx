@@ -83,7 +83,7 @@ export function CenterArea({
           {discardTop ? (
             <Card card={discardTop} size="lg" />
           ) : (
-            <div className="w-[88px] h-[124px] rounded-[12px] border-2 border-dashed border-slate-600/70" />
+            <div className="w-[96px] h-[136px] rounded-[12px] border-2 border-dashed border-slate-600/70" />
           )}
         </motion.div>
         <div className="text-xs text-slate-300/80">
@@ -107,7 +107,7 @@ function DeckStack({
 }) {
   if (deckCount === 0) {
     return (
-      <div className="w-[88px] h-[124px] rounded-[12px] border-2 border-dashed border-slate-600/70" />
+      <div className="w-[96px] h-[136px] rounded-[12px] border-2 border-dashed border-slate-600/70" />
     );
   }
 
@@ -121,7 +121,7 @@ function DeckStack({
       whileTap={canDraw ? { scale: 0.95 } : {}}
       onClick={() => canDraw && onDrawDeck()}
       className={`relative ${canDraw ? "cursor-pointer" : ""}`}
-      style={{ width: "88px", height: "124px" }}
+      style={{ width: "96px", height: "136px" }}
     >
       {/* Stack: deeper layers behind, slightly offset down-right */}
       {Array.from({ length: layers }).map((_, i) => {
