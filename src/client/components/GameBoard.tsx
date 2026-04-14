@@ -102,6 +102,7 @@ export function GameBoard({ state, send }: GameBoardProps) {
           players={players}
           currentPlayerId={currentPlayerId}
           selfId={you.playerId}
+          mode={state.mode}
         />
       </div>
 

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import type { GameMode } from "../../shared/types.ts";
 import type { PlayerView } from "../../shared/protocol.ts";
 import { ICON_MAP, ICON_COLORS } from "../lib/icons.ts";
 
@@ -6,6 +7,7 @@ interface PlayerBarProps {
   players: PlayerView[];
   currentPlayerId: string | null;
   selfId: string;
+  mode: GameMode | null;
 }
 
 /**
@@ -23,6 +25,7 @@ export function PlayerBar({
   players,
   currentPlayerId,
   selfId,
+  mode,
 }: PlayerBarProps) {
   const opponents = players
     .map((p, i) => ({ player: p, colorIndex: i }))
@@ -41,12 +44,14 @@ export function PlayerBar({
         const Icon = ICON_MAP[player.icon];
         const color = ICON_COLORS[colorIndex % ICON_COLORS.length];
         const isActive = currentPlayerId === player.playerId;
+        const hasDrawn =
+          isActive && mode != null && player.cardCount === mode + 1;
 
         return (
           <div
             key={player.playerId}
             data-testid={`player-bar-${player.name}`}
-            className="flex flex-col items-center gap-1 flex-shrink-0"
+            className="flex flex-col items-center gap-2.5 flex-shrink-0"
           >
             <div className="relative">
               {isActive && (
@@ -75,7 +80,10 @@ export function PlayerBar({
             >
               {player.name}
             </span>
-            <CardBacksVisualization count={player.cardCount} />
+            <CardBacksVisualization
+              count={player.cardCount}
+              hasDrawn={hasDrawn}
+            />
           </div>
         );
       })}
@@ -85,35 +93,57 @@ export function PlayerBar({
 
 /**
  * Stylized representation of a player's hand: a fanned row of small card
- * backs. Caps the visible count at 7 to keep the visual compact; actual
- * card count is conveyed by the discard/draw mechanics.
+ * backs. Caps the visible count at 8 to keep the visual compact.
+ *
+ * When `hasDrawn` is true, the rightmost card renders in purple with a
+ * pulse — a visual cue that this player has drawn and needs to discard.
  */
-function CardBacksVisualization({ count }: { count: number }) {
-  const visible = Math.min(count, 7);
+function CardBacksVisualization({
+  count,
+  hasDrawn,
+}: {
+  count: number;
+  hasDrawn: boolean;
+}) {
+  const visible = Math.min(count, 8);
   if (visible === 0) {
-    return <div className="h-5" />;
+    return <div className="h-7" />;
   }
 
-  const cardW = 12;
-  const overlap = 7;
+  const cardW = 16;
+  const overlap = 9;
   const totalW = cardW + (visible - 1) * (cardW - overlap);
 
   return (
-    <div className="relative h-5" style={{ width: `${totalW}px` }}>
-      {Array.from({ length: visible }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute top-0 rounded-[2px] bg-card-blue border border-card-blue-dark"
-          style={{
-            left: `${i * (cardW - overlap)}px`,
-            width: `${cardW}px`,
-            height: "20px",
-            zIndex: i,
-          }}
-        >
-          <div className="absolute inset-[1.5px] rounded-[1px] border border-card-blue-light/60" />
-        </div>
-      ))}
+    <div className="relative h-7" style={{ width: `${totalW}px` }}>
+      {Array.from({ length: visible }).map((_, i) => {
+        const isDrawnCard = hasDrawn && i === visible - 1;
+        const left = i * (cardW - overlap);
+
+        if (isDrawnCard) {
+          return (
+            <motion.div
+              key={i}
+              animate={{ opacity: [0.45, 1, 0.45] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+              className="absolute top-0 rounded-[3px] border bg-purple-600 border-purple-800"
+              style={{ left: `${left}px`, width: `${cardW}px`, height: "26px", zIndex: i }}
+            >
+              <div className="absolute inset-[1.5px] rounded-[2px] border border-purple-400/60" />
+            </motion.div>
+          );
+        }
+
+        return (
+          <div
+            key={i}
+            className="absolute top-0 rounded-[3px] bg-card-blue border border-card-blue-dark"
+            style={{ left: `${left}px`, width: `${cardW}px`, height: "26px", zIndex: i }}
+          >
+            <div className="absolute inset-[1.5px] rounded-[2px] border border-card-blue-light/60" />
+          </div>
+        );
+      })}
     </div>
   );
 }
