@@ -122,15 +122,18 @@ function CardBacksVisualization({
 
         if (isDrawnCard) {
           return (
-            <motion.div
+            <div
               key={i}
-              animate={{ opacity: [0.45, 1, 0.45] }}
-              transition={{ duration: 1.2, repeat: Infinity }}
-              className="absolute top-0 rounded-[3px] border bg-purple-600 border-purple-800"
+              className="absolute top-0 rounded-[3px] bg-purple-600 border border-purple-800"
               style={{ left: `${left}px`, width: `${cardW}px`, height: "26px", zIndex: i }}
             >
               <div className="absolute inset-[1.5px] rounded-[2px] border border-purple-400/60" />
-            </motion.div>
+              <motion.div
+                className="absolute inset-0 rounded-[3px] ring-2 ring-purple-400 pointer-events-none"
+                animate={{ opacity: [0.3, 1, 0.3] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              />
+            </div>
           );
         }
 

@@ -7,8 +7,27 @@ import {
   type PanInfo,
 } from "framer-motion";
 import type { RefObject } from "react";
+import { ArrowUpDown } from "lucide-react";
 import type { Card as CardType } from "../../shared/types.ts";
+import { RANK_ORDER } from "../../shared/types.ts";
+import type { Suit } from "../../shared/types.ts";
 import { Card } from "./Card.tsx";
+
+/** Standard bridge suit order: clubs, diamonds, hearts, spades. */
+const SUIT_ORDER: Record<Suit, number> = {
+  clubs: 0,
+  diamonds: 1,
+  hearts: 2,
+  spades: 3,
+};
+
+function sortCards(cards: CardType[]): CardType[] {
+  return [...cards].sort((a, b) => {
+    const rankDiff = RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
+    if (rankDiff !== 0) return rankDiff;
+    return SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit];
+  });
+}
 
 interface PlayerHandProps {
   hand: CardType[];
@@ -300,6 +319,11 @@ export function PlayerHand({
     });
   }
 
+  function handleSort() {
+    if (draggingCard) return;
+    setOrder(sortCards);
+  }
+
   function handleDragEnd(card: CardType, info: PanInfo) {
     setDraggingCard(null);
     onDraggingChange?.(null);
@@ -313,9 +337,17 @@ export function PlayerHand({
 
   return (
     <div
-      className="w-full pt-3 pb-4 overflow-visible flex justify-center"
+      className="w-full pt-3 pb-4 overflow-visible flex justify-center relative"
       data-testid="player-hand"
     >
+      <button
+        data-testid="sort-hand-btn"
+        onClick={handleSort}
+        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-slate-700/60 hover:bg-slate-600/80 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer"
+        title="Sort hand"
+      >
+        <ArrowUpDown className="w-4 h-4" />
+      </button>
       <div
         ref={containerRef}
         className="relative"
