@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   ServerMessage,
   StateMessage,
@@ -15,7 +15,19 @@ interface GameState {
   error: string | null;
 }
 
-export function useGameState(lastMessage: ServerMessage | null) {
+/**
+ * Manages client-side game state derived from server messages.
+ *
+ * Returns a stable `processMessage` callback that should be called
+ * directly from the WebSocket `onmessage` handler — NOT via an
+ * intermediate `lastMessage` state. Using a state intermediary loses
+ * messages when React batches rapid-fire updates (e.g. the server
+ * sends both a `state` and `game_complete` message in the same
+ * broadcast). Functional `setGameState(prev => ...)` updates are
+ * immune to batching because each updater runs against the latest
+ * state, in order.
+ */
+export function useGameState() {
   const [gameState, setGameState] = useState<GameState>({
     state: null,
     dealing: null,
@@ -26,17 +38,21 @@ export function useGameState(lastMessage: ServerMessage | null) {
 
   const errorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Cleanup error timer on unmount
   useEffect(() => {
-    if (!lastMessage) return;
+    return () => {
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+    };
+  }, []);
 
-    switch (lastMessage.type) {
+  const processMessage = useCallback((msg: ServerMessage) => {
+    switch (msg.type) {
       case "state":
         setGameState((prev) => ({
           ...prev,
-          state: lastMessage,
-          // Clear dealing once we get a playing state
+          state: msg,
           dealing:
-            lastMessage.phase === "playing" || lastMessage.phase === "complete"
+            msg.phase === "playing" || msg.phase === "complete"
               ? null
               : prev.dealing,
         }));
@@ -45,32 +61,30 @@ export function useGameState(lastMessage: ServerMessage | null) {
       case "dealing":
         setGameState((prev) => ({
           ...prev,
-          dealing: lastMessage,
+          dealing: msg,
         }));
         break;
 
       case "lobby_info":
         setGameState((prev) => ({
           ...prev,
-          lobbyInfo: lastMessage,
+          lobbyInfo: msg,
         }));
         break;
 
       case "game_complete":
         setGameState((prev) => ({
           ...prev,
-          gameComplete: lastMessage,
+          gameComplete: msg,
         }));
         break;
 
       case "error":
-        // Clear any existing timer
         if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
         setGameState((prev) => ({
           ...prev,
-          error: lastMessage.message,
+          error: msg.message,
         }));
-        // Auto-clear error after 3s
         errorTimerRef.current = setTimeout(() => {
           setGameState((prev) => ({ ...prev, error: null }));
         }, 3000);
@@ -80,14 +94,14 @@ export function useGameState(lastMessage: ServerMessage | null) {
         setGameState((prev) => {
           if (!prev.state) return prev;
           const exists = prev.state.players.some(
-            (p) => p.playerId === lastMessage.player.playerId
+            (p) => p.playerId === msg.player.playerId,
           );
           if (exists) return prev;
           return {
             ...prev,
             state: {
               ...prev.state,
-              players: [...prev.state.players, lastMessage.player],
+              players: [...prev.state.players, msg.player],
             },
           };
         });
@@ -101,7 +115,7 @@ export function useGameState(lastMessage: ServerMessage | null) {
             state: {
               ...prev.state,
               players: prev.state.players.filter(
-                (p) => p.playerId !== lastMessage.playerId
+                (p) => p.playerId !== msg.playerId,
               ),
             },
           };
@@ -116,9 +130,9 @@ export function useGameState(lastMessage: ServerMessage | null) {
             state: {
               ...prev.state,
               players: prev.state.players.map((p) =>
-                p.playerId === lastMessage.playerId
+                p.playerId === msg.playerId
                   ? { ...p, connected: true }
-                  : p
+                  : p,
               ),
             },
           };
@@ -133,23 +147,16 @@ export function useGameState(lastMessage: ServerMessage | null) {
             state: {
               ...prev.state,
               players: prev.state.players.map((p) =>
-                p.playerId === lastMessage.playerId
+                p.playerId === msg.playerId
                   ? { ...p, connected: false }
-                  : p
+                  : p,
               ),
             },
           };
         });
         break;
     }
-  }, [lastMessage]);
-
-  // Cleanup error timer on unmount
-  useEffect(() => {
-    return () => {
-      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
-    };
   }, []);
 
-  return gameState;
+  return { ...gameState, processMessage };
 }

@@ -79,12 +79,13 @@ function GameRoomInner({
     return { playerId: fresh, isReturning: false };
   });
 
-  const { send, lastMessage, connected, failed, retry } = useWebSocket(
+  const { state, dealing, gameComplete, lobbyInfo, error, processMessage } =
+    useGameState();
+  const { send, connected, failed, retry } = useWebSocket(
     gameId,
     playerId,
+    processMessage,
   );
-  const { state, dealing, gameComplete, lobbyInfo, error } =
-    useGameState(lastMessage);
 
   // After connecting, give the server a brief window to send state before we
   // assume this player isn't in the game. Avoids a join-form flash for

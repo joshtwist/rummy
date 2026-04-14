@@ -93,9 +93,12 @@ export function GameBoard({ state, send }: GameBoardProps) {
   }
 
   return (
-    <div className={`flex flex-1 flex-col min-h-0 transition-colors duration-700 ${
-      isMyTurn ? "bg-felt-active" : "bg-felt"
-    }`}>
+    <div
+      className={`flex flex-1 flex-col min-h-0 transition-all duration-700 ${
+        isMyTurn ? "bg-felt-active" : "bg-felt"
+      }`}
+      style={isMyTurn ? { boxShadow: "inset 0 0 80px rgba(245, 158, 11, 0.06)" } : undefined}
+    >
       {/* 1. Opponents */}
       <div className="flex-shrink-0">
         <PlayerBar
