@@ -55,7 +55,7 @@ export function CenterArea({
           onDrawDeck={onDrawDeck}
         />
         <div className="text-xs text-slate-300/80">
-          {deckCount} left
+          {deckCount === 0 ? "Empty" : `${deckCount} left`}
         </div>
       </div>
 
@@ -83,7 +83,7 @@ export function CenterArea({
           {discardTop ? (
             <Card card={discardTop} size="lg" />
           ) : (
-            <div className="w-[88px] h-[124px] rounded-[12px] border-2 border-dashed border-slate-600/70" />
+            <div className="w-[96px] h-[136px] rounded-[12px] border-2 border-dashed border-slate-600/70" />
           )}
         </motion.div>
         <div className="text-xs text-slate-300/80">
@@ -107,7 +107,28 @@ function DeckStack({
 }) {
   if (deckCount === 0) {
     return (
-      <div className="w-[88px] h-[124px] rounded-[12px] border-2 border-dashed border-slate-600/70" />
+      <motion.div
+        data-testid="deck"
+        whileHover={canDraw ? { scale: 1.05 } : {}}
+        whileTap={canDraw ? { scale: 0.95 } : {}}
+        onClick={() => canDraw && onDrawDeck()}
+        className={`relative w-[96px] h-[136px] rounded-[12px] border-2 border-dashed ${
+          canDraw ? "border-gold/60 cursor-pointer" : "border-slate-600/70"
+        }`}
+      >
+        {canDraw && (
+          <>
+            <motion.div
+              className="absolute -inset-1 rounded-[14px] ring-2 ring-gold pointer-events-none"
+              animate={{ opacity: [0.35, 0.9, 0.35] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+            />
+            <div className="absolute inset-0 flex items-center justify-center text-[10px] text-gold/70 font-medium">
+              Tap to reshuffle
+            </div>
+          </>
+        )}
+      </motion.div>
     );
   }
 
@@ -121,7 +142,7 @@ function DeckStack({
       whileTap={canDraw ? { scale: 0.95 } : {}}
       onClick={() => canDraw && onDrawDeck()}
       className={`relative ${canDraw ? "cursor-pointer" : ""}`}
-      style={{ width: "88px", height: "124px" }}
+      style={{ width: "96px", height: "136px" }}
     >
       {/* Stack: deeper layers behind, slightly offset down-right */}
       {Array.from({ length: layers }).map((_, i) => {

@@ -11,17 +11,32 @@ const MAX_RECONNECT_ATTEMPTS = 3;
  * caps at {@link MAX_RECONNECT_ATTEMPTS} tries to avoid burning cost on a
  * doomed connection (bad URL, server down, etc). After the cap, a
  * `failed` flag is surfaced so the UI can render a manual-retry button.
+ *
+ * `onMessage` is called directly from `ws.onmessage` for every non-pong
+ * server message. This avoids the React-batching trap where an
+ * intermediate `lastMessage` state silently drops messages when two
+ * arrive in the same tick (the root cause of the "winner doesn't see
+ * win screen" and "returning player sees join form" bugs).
  */
-export function useWebSocket(gameId: string, playerId: string) {
+export function useWebSocket(
+  gameId: string,
+  playerId: string,
+  onMessage: (msg: ServerMessage) => void,
+) {
   const socketRef = useRef<WebSocket | null>(null);
   const reconnectAttemptRef = useRef(0);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
 
+  // Stable ref so the latest callback is always called without
+  // needing it in the `connect` dependency array (which would cause
+  // reconnections on every render).
+  const onMessageRef = useRef(onMessage);
+  onMessageRef.current = onMessage;
+
   const [connected, setConnected] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [lastMessage, setLastMessage] = useState<ServerMessage | null>(null);
 
   const send = useCallback((msg: ClientMessage) => {
     const ws = socketRef.current;
@@ -69,7 +84,7 @@ export function useWebSocket(gameId: string, playerId: string) {
       try {
         const msg = JSON.parse(event.data) as ServerMessage;
         if (msg.type === "pong") return;
-        setLastMessage(msg);
+        onMessageRef.current(msg);
       } catch {
         // Invalid JSON -- ignore
       }
@@ -124,5 +139,5 @@ export function useWebSocket(gameId: string, playerId: string) {
     };
   }, [connect]);
 
-  return { send, lastMessage, connected, failed, retry };
+  return { send, connected, failed, retry };
 }

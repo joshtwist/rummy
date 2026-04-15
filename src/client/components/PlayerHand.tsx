@@ -7,8 +7,27 @@ import {
   type PanInfo,
 } from "framer-motion";
 import type { RefObject } from "react";
+import { ArrowUpDown } from "lucide-react";
 import type { Card as CardType } from "../../shared/types.ts";
+import { RANK_ORDER } from "../../shared/types.ts";
+import type { Suit } from "../../shared/types.ts";
 import { Card } from "./Card.tsx";
+
+/** Standard bridge suit order: clubs, diamonds, hearts, spades. */
+const SUIT_ORDER: Record<Suit, number> = {
+  clubs: 0,
+  diamonds: 1,
+  hearts: 2,
+  spades: 3,
+};
+
+function sortCards(cards: CardType[]): CardType[] {
+  return [...cards].sort((a, b) => {
+    const rankDiff = RANK_ORDER[a.rank] - RANK_ORDER[b.rank];
+    if (rankDiff !== 0) return rankDiff;
+    return SUIT_ORDER[a.suit] - SUIT_ORDER[b.suit];
+  });
+}
 
 interface PlayerHandProps {
   hand: CardType[];
@@ -29,10 +48,10 @@ function cardsEqual(a: CardType, b: CardType): boolean {
 
 /* ── Layout constants ───────────────────────────────────────────────── */
 
-const CARD_WIDTH = 88;
-const CARD_HEIGHT = 124;
-const TARGET_ROW_PX = 358;
-const MIN_STEP = 26;
+const CARD_WIDTH = 96;
+const CARD_HEIGHT = 136;
+const TARGET_ROW_PX = 378;
+const MIN_STEP = 28;
 
 function stepFor(count: number): number {
   if (count <= 1) return CARD_WIDTH;
@@ -61,6 +80,7 @@ interface HandCardProps {
   idx: number;
   step: number;
   isDragging: boolean;
+  isNew: boolean;
   onDragStart: (card: CardType) => void;
   onDrag: (card: CardType, info: PanInfo) => void;
   onDragEnd: (card: CardType, info: PanInfo) => void;
@@ -84,6 +104,7 @@ function HandCard({
   idx,
   step,
   isDragging,
+  isNew,
   onDragStart,
   onDrag,
   onDragEnd,
@@ -153,6 +174,14 @@ function HandCard({
       className="touch-none cursor-grab active:cursor-grabbing"
     >
       <Card card={card} size="lg" />
+      {isNew && !isDragging && (
+        <motion.div
+          className="absolute inset-0 rounded-[12px] ring-2 ring-gold pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: [0.3, 0.9, 0.3] }}
+          transition={{ duration: 1.4, repeat: Infinity }}
+        />
+      )}
     </motion.div>
   );
 }
@@ -193,6 +222,23 @@ export function PlayerHand({
   // Stable DOM render order. New cards append; removed cards drop out.
   // Does NOT update on reorder-during-drag.
   const domOrderRef = useRef<CardType[]>([]);
+
+  // Track the most recently drawn card so we can highlight it.
+  const [newCardKey, setNewCardKey] = useState<string | null>(null);
+  const prevHandRef = useRef<CardType[]>(hand);
+
+  // Detect newly drawn card (hand grew by 1) or discard (hand shrank).
+  useEffect(() => {
+    const prev = prevHandRef.current;
+    if (hand.length === prev.length + 1) {
+      const prevKeys = new Set(prev.map(cardKey));
+      const added = hand.find((c) => !prevKeys.has(cardKey(c)));
+      if (added) setNewCardKey(cardKey(added));
+    } else if (hand.length < prev.length) {
+      setNewCardKey(null);
+    }
+    prevHandRef.current = hand;
+  }, [hand]);
 
   // Sync local order with server hand. Preserve manual reorder; append new
   // cards at the end; drop cards that are no longer in the hand. Skip
@@ -273,6 +319,11 @@ export function PlayerHand({
     });
   }
 
+  function handleSort() {
+    if (draggingCard) return;
+    setOrder(sortCards);
+  }
+
   function handleDragEnd(card: CardType, info: PanInfo) {
     setDraggingCard(null);
     onDraggingChange?.(null);
@@ -286,9 +337,17 @@ export function PlayerHand({
 
   return (
     <div
-      className="w-full pt-3 pb-4 overflow-visible flex justify-center"
+      className="w-full pt-3 pb-4 overflow-visible flex justify-center relative"
       data-testid="player-hand"
     >
+      <button
+        data-testid="sort-hand-btn"
+        onClick={handleSort}
+        className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-8 h-8 rounded-full bg-slate-700/60 hover:bg-slate-600/80 flex items-center justify-center text-slate-300 hover:text-white transition-colors cursor-pointer"
+        title="Sort hand"
+      >
+        <ArrowUpDown className="w-4 h-4" />
+      </button>
       <div
         ref={containerRef}
         className="relative"
@@ -311,6 +370,7 @@ export function PlayerHand({
                 idx={idx}
                 step={step}
                 isDragging={isDragging}
+                isNew={newCardKey === key}
                 onDragStart={handleDragStart}
                 onDrag={handleDrag}
                 onDragEnd={handleDragEnd}

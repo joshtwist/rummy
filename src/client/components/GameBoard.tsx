@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Timer } from "lucide-react";
 import type { StateMessage, ClientMessage } from "../../shared/protocol.ts";
 import type { Card as CardType } from "../../shared/types.ts";
 import { vibrateAction } from "../lib/haptics.ts";
@@ -49,6 +50,16 @@ export function GameBoard({ state, send }: GameBoardProps) {
   const [draggedCard, setDraggedCard] = useState<CardType | null>(null);
   const [dragOverDiscard, setDragOverDiscard] = useState(false);
 
+  // Turn stopwatch: resets when the active player changes.
+  const [turnSeconds, setTurnSeconds] = useState(0);
+  useEffect(() => {
+    setTurnSeconds(0);
+    const id = setInterval(() => setTurnSeconds((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [currentPlayerId]);
+
+  const turnTime = `${Math.floor(turnSeconds / 60)}:${String(turnSeconds % 60).padStart(2, "0")}`;
+
   // Haptic when own hand size changes (draw/discard confirm)
   const lastHandSizeRef = useRef(you.hand.length);
   useEffect(() => {
@@ -82,13 +93,19 @@ export function GameBoard({ state, send }: GameBoardProps) {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-felt min-h-0">
+    <div
+      className={`flex flex-1 flex-col min-h-0 transition-all duration-700 ${
+        isMyTurn ? "bg-felt-active" : "bg-felt"
+      }`}
+      style={isMyTurn ? { boxShadow: "inset 0 0 80px rgba(245, 158, 11, 0.06)" } : undefined}
+    >
       {/* 1. Opponents */}
       <div className="flex-shrink-0">
         <PlayerBar
           players={players}
           currentPlayerId={currentPlayerId}
           selfId={you.playerId}
+          mode={state.mode}
         />
       </div>
 
@@ -96,13 +113,17 @@ export function GameBoard({ state, send }: GameBoardProps) {
       <div className="flex-shrink-0 flex justify-center pt-1 pb-2">
         <div
           data-testid="status-bar"
-          className={`px-4 py-1 rounded-full text-sm font-semibold ${
+          className={`flex items-center gap-2 px-4 py-1 rounded-full text-sm font-semibold ${
             isMyTurn
               ? "bg-gold/15 text-gold border border-gold/40"
               : "bg-slate-800/40 text-slate-300"
           }`}
         >
           {statusText}
+          <span className="flex items-center gap-1 text-xs font-normal opacity-70">
+            <Timer className="w-3 h-3" />
+            {turnTime}
+          </span>
         </div>
       </div>
 
